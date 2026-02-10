@@ -1,9 +1,16 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Layout, Model, TabNode, IJsonModel } from "flexlayout-react";
+import { Layout, Model, TabNode, IJsonModel, Actions } from "flexlayout-react";
 import "flexlayout-react/style/dark.css";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { presets } from "@/config/layoutPresets";
-import { Save, Trash2, LayoutDashboard } from "lucide-react";
+import { Save, Trash2, LayoutDashboard, Plus } from "lucide-react";
 
 import PortfolioSummary from "@/components/panels/PortfolioSummary";
 import HoldingsTable from "@/components/panels/HoldingsTable";
@@ -20,6 +27,15 @@ const componentMap: Record<string, React.FC> = {
   AssetAllocation,
   RecentTransactions,
 };
+
+// Available panels for the selector
+const availablePanels = [
+  { id: "PortfolioSummary", label: "Portfolio Summary" },
+  { id: "HoldingsTable", label: "Holdings Table" },
+  { id: "PerformanceChart", label: "Performance Chart" },
+  { id: "AssetAllocation", label: "Asset Allocation" },
+  { id: "RecentTransactions", label: "Recent Transactions" },
+];
 
 function loadCustomPresets(): Record<string, IJsonModel> {
   try {
@@ -38,6 +54,7 @@ const Index = () => {
   const [model, setModel] = useState(() => Model.fromJson(presets.Overview));
   const [activePreset, setActivePreset] = useState("Overview");
   const [customPresets, setCustomPresets] = useState<Record<string, IJsonModel>>(loadCustomPresets);
+  const [selectedPanel, setSelectedPanel] = useState<string>("");
   const layoutRef = useRef<Layout>(null);
 
   const factory = useCallback((node: TabNode) => {
@@ -49,6 +66,23 @@ const Index = () => {
   const switchPreset = (name: string, config: IJsonModel) => {
     setModel(Model.fromJson(config));
     setActivePreset(name);
+  };
+
+  const handleAddPanel = (panelId: string) => {
+    if (!panelId || !layoutRef.current) return;
+    
+    const panel = availablePanels.find(p => p.id === panelId);
+    if (!panel) return;
+
+    // Add the panel to the active tabset or root
+    layoutRef.current.addTabToActiveTabSet({
+      type: "tab",
+      name: panel.label,
+      component: panel.id,
+    });
+
+    // Reset selector
+    setSelectedPanel("");
   };
 
   const handleSave = () => {
@@ -80,6 +114,25 @@ const Index = () => {
       <header className="flex items-center gap-2 px-4 py-2 border-b border-border bg-card shrink-0 flex-wrap">
         <LayoutDashboard className="h-5 w-5 text-primary mr-1" />
         <span className="font-bold text-sm mr-4 text-foreground">Portfolio Dashboard</span>
+
+        {/* Panel Selector */}
+        <div className="flex items-center gap-1">
+          <Select value={selectedPanel} onValueChange={handleAddPanel}>
+            <SelectTrigger className="h-8 w-[180px]">
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              <SelectValue placeholder="Add Panel" />
+            </SelectTrigger>
+            <SelectContent>
+              {availablePanels.map((panel) => (
+                <SelectItem key={panel.id} value={panel.id}>
+                  {panel.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="w-px h-6 bg-border mx-1" />
 
         {/* Built-in presets */}
         {Object.keys(presets).map((name) => (
